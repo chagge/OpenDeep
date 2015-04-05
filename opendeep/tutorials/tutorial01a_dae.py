@@ -29,7 +29,7 @@ class DenoisingAutoencoder(Model):
         # Perform the computation for a denoising autoencoder!
         # first, add noise (corrupt) the input
         corrupted_input = salt_and_pepper(input=x, corruption_level=0.4)
-        # next, compute the hidden layer given the inputs (the encoding function)
+        # next, run the hidden layer given the inputs (the encoding function)
         hiddens = tanh(T.dot(corrupted_input, W) + b1)
         # finally, create the reconstruction from the hidden layer (we tie the weights with W.T)
         reconstruction = sigmoid(T.dot(hiddens, W.T) + b0)
@@ -82,8 +82,8 @@ if __name__ == '__main__':
     # test it on some images!
     test_data = mnist.getDataByIndices(indices=range(25), subset=TEST)
     corrupted_test = salt_and_pepper(test_data, 0.4).eval()
-    # use the predict function!
-    reconstructed_images = dae.predict(corrupted_test)
+    # use the run function!
+    reconstructed_images = dae.run(corrupted_test)
 
     # create an image from this reconstruction!
     # imports for working with tiling outputs into one image

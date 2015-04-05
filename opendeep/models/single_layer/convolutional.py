@@ -24,7 +24,7 @@ from theano.tensor.signal import downsample
 # internal references
 from opendeep.models.model import Model
 from opendeep.utils.activation import get_activation_function
-from opendeep.utils.nnet import get_weights_gaussian, get_weights_uniform, get_bias, cross_channel_normalization_bc01
+from opendeep.utils.nnet import get_weights, get_weights_gaussian, get_bias, cross_channel_normalization_bc01
 from opendeep.utils.conv1d_implementations import conv1d_mc0
 
 
@@ -69,7 +69,8 @@ class Conv1D(Model):
         'weights_std': 0.005,  # standard deviation for gaussian weights init
         'bias_init': 0.0,  # how to initialize the bias parameter
         "activation": 'rectifier',
-        "convolution": conv1d_mc0
+        "convolution": conv1d_mc0,
+        'outdir': 'outputs/conv1d'  # the output directory for this model's outputs
     }
     def __init__(self, inputs_hook, params_hook=None, input_shape=None, filter_shape=None, stride=None,
                  weights_init=None, weights_interval=None, weights_mean=None, weights_std=None, bias_init=None,
@@ -94,13 +95,7 @@ class Conv1D(Model):
             self.input = T.ftensor3('X')
 
         # activation function!
-        # if a string name was given, look up the correct function from our utils.
-        if isinstance(self.activation, basestring):
-            activation_func = get_activation_function(self.activation)
-        # otherwise, if a 'callable' was passed (i.e. custom function), use that directly.
-        else:
-            assert callable(self.activation), "Activation function either needs to be a string name or callable!"
-            activation_func = self.activation
+        activation_func = get_activation_function(self.activation)
 
         # filter shape should be in the form (num_filters, num_channels, filter_length)
         num_filters = self.filter_shape[0]
@@ -115,21 +110,14 @@ class Conv1D(Model):
                 "Expected 2 params (W and b) for Conv1D, found {0!s}!".format(len(self.params_hook))
             W, b = self.params_hook
         else:
-            # if we are initializing weights from a gaussian
-            if self.weights_init.lower() == 'gaussian':
-                W = get_weights_gaussian(
-                    shape=self.filter_shape, mean=self.weights_mean, std=self.weights_std, name="W"
-                )
-            # if we are initializing weights from a uniform distribution
-            elif self.weights_init.lower() == 'uniform':
-                W = get_weights_uniform(shape=self.filter_shape, interval=self.weights_interval, name="W")
-            # otherwise not implemented
-            else:
-                log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                          str(self.weights_init))
-                raise NotImplementedError(
-                    "Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                    str(self.weights_init))
+            W = get_weights(weights_init=self.weights_init,
+                            shape=self.filter_shape,
+                            name="W",
+                            # if gaussian
+                            mean=self.weights_mean,
+                            std=self.weights_std,
+                            # if uniform
+                            interval=self.weights_interval)
 
             b = get_bias(shape=(num_filters,), name="b", init_values=self.bias_init)
 
@@ -189,7 +177,8 @@ class Conv2D(Model):
         'bias_init': 0.0,  # how to initialize the bias parameter
         "activation": 'rectifier',
         # using the theano flag optimizer_including=conv_meta will let this conv function optimize itself.
-        "convolution": T.nnet.conv2d
+        "convolution": T.nnet.conv2d,
+        'outdir': 'outputs/conv2d'  # the output directory for this model's outputs
     }
     def __init__(self, inputs_hook, params_hook=None, input_shape=None, filter_shape=None, strides=None,
                  weights_init=None, weights_interval=None, weights_mean=None, weights_std=None, bias_init=None,
@@ -214,13 +203,7 @@ class Conv2D(Model):
             self.input = T.ftensor4('X')
 
         # activation function!
-        # if a string name was given, look up the correct function from our utils.
-        if isinstance(self.activation, basestring):
-            activation_func = get_activation_function(self.activation)
-        # otherwise, if a 'callable' was passed (i.e. custom function), use that directly.
-        else:
-            assert callable(self.activation), "Activation function either needs to be a string name or callable!"
-            activation_func = self.activation
+        activation_func = get_activation_function(self.activation)
 
         # filter shape should be in the form (num_filters, num_channels, filter_size[0], filter_size[1])
         num_filters = self.filter_shape[0]
@@ -235,21 +218,14 @@ class Conv2D(Model):
                 "Expected 2 params (W and b) for Conv2D, found {0!s}!".format(len(self.params_hook))
             W, b = self.params_hook
         else:
-            # if we are initializing weights from a gaussian
-            if self.weights_init.lower() == 'gaussian':
-                W = get_weights_gaussian(
-                    shape=self.filter_shape, mean=self.weights_mean, std=self.weights_std, name="W"
-                )
-            # if we are initializing weights from a uniform distribution
-            elif self.weights_init.lower() == 'uniform':
-                W = get_weights_uniform(shape=self.filter_shape, interval=self.weights_interval, name="W")
-            # otherwise not implemented
-            else:
-                log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                          str(self.weights_init))
-                raise NotImplementedError(
-                    "Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                    str(self.weights_init))
+            W = get_weights(weights_init=self.weights_init,
+                            shape=self.filter_shape,
+                            name="W",
+                            # if gaussian
+                            mean=self.weights_mean,
+                            std=self.weights_std,
+                            # if uniform
+                            interval=self.weights_interval)
 
             b = get_bias(shape=(num_filters, ), name="b", init_values=self.bias_init)
 
@@ -308,7 +284,8 @@ class Conv3D(Model):
         'bias_init': 0.0,  # how to initialize the bias parameter
         "activation": 'rectifier',
         # using the theano flag optimizer_including=conv_meta will let this conv function optimize itself.
-        "convolution": T.nnet.conv3D
+        "convolution": T.nnet.conv3D,
+        'outdir': 'outputs/conv3d'  # the output directory for this model's outputs
     }
 
     def __init__(self):
@@ -345,6 +322,7 @@ class ConvPoolLayer(Model):
         'weights_interval': 'montreal',  # if the weights_init was 'uniform', how to initialize from uniform
         'weights_mean': 0,  # mean for gaussian weights init
         'weights_std': 0.01,  # standard deviation for gaussian weights init
+        'outdir': 'outputs/convpool'  # the output directory for this model's outputs
     }
     def __init__(self, inputs_hook, input_shape=None, filter_shape=None, convstride=None, padsize=None, group=None,
                  poolsize=None, poolstride=None, bias_init=None, local_response_normalization=None,
@@ -366,13 +344,7 @@ class ConvPoolLayer(Model):
         # layer configuration #
         #######################
         # activation function!
-        # if a string name was given, look up the correct function from our utils.
-        if isinstance(self.activation, basestring):
-            self.activation_func = get_activation_function(self.activation)
-        # otherwise, if a 'callable' was passed (i.e. custom function), use that directly.
-        else:
-            assert callable(self.activation), "Activation function either needs to be a string name or callable!"
-            self.activation_func = self.activation
+        self.activation_func = get_activation_function(self.activation)
 
         # expect image_shape to be bc01!
         self.channel = self.input_shape[1]
@@ -400,23 +372,17 @@ class ConvPoolLayer(Model):
                     "Expected 2 params (W and b) for ConvPoolLayer, found {0!s}!".format(len(self.params_hook))
                 self.W, self.b = self.params_hook
             else:
-                # if we are initializing weights from a gaussian
-                if self.weights_init.lower() == 'gaussian':
-                    self.W = get_weights_gaussian(
-                        shape=self.filter_shape, mean=self.weights_mean, std=self.weights_std, name="W"
-                    )
-                # if we are initializing weights from a uniform distribution
-                elif self.weights_init.lower() == 'uniform':
-                    self.W = get_weights_uniform(shape=self.filter_shape, interval=self.weights_interval, name="W")
-                # otherwise not implemented
-                else:
-                    log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                              str(self.weights_init))
-                    raise NotImplementedError(
-                        "Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                        str(self.weights_init))
+                self.W = get_weights(weights_init=self.weights_init,
+                                     shape=self.filter_shape,
+                                     name="W",
+                                     # if gaussian
+                                     mean=self.weights_mean,
+                                     std=self.weights_std,
+                                     # if uniform
+                                     interval=self.weights_interval)
 
                 self.b = get_bias(shape=self.filter_shape[0], init_values=self.bias_init, name="b")
+
             self.params = [self.W, self.b]
 
         else:

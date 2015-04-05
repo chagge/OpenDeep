@@ -17,7 +17,7 @@ import logging
 import theano.tensor as T
 # internal references
 from opendeep.models.model import Model
-from opendeep.utils.nnet import get_weights_gaussian, get_weights_uniform, get_bias
+from opendeep.utils.nnet import get_weights, get_bias
 from opendeep.utils.activation import get_activation_function
 from opendeep.utils.cost import get_cost_function
 
@@ -37,7 +37,8 @@ class BasicLayer(Model):
         'weights_interval': 'montreal',  # if the weights_init was 'uniform', how to initialize from uniform
         'bias_init': 0.0,  # how to initialize the bias parameter
         'input_size': None,
-        'output_size': None
+        'output_size': None,
+        'outdir': 'outputs/basic'  # the output directory for this model's outputs
     }
     def __init__(self, inputs_hook=None, config=None, defaults=default, params_hook=None,
                  input_size=None, output_size=None, activation=None, cost=None, cost_args=None,
@@ -67,22 +68,9 @@ class BasicLayer(Model):
 
         # other specifications
         # activation function!
-        # if a string name was given, look up the correct function from our utils.
-        if isinstance(self.activation, basestring):
-            activation_func = get_activation_function(self.activation)
-        # otherwise, if a 'callable' was passed (i.e. custom function), use that directly.
-        else:
-            assert callable(self.activation), "Activation function either needs to be a string name or callable!"
-            activation_func = self.activation
-
+        activation_func = get_activation_function(self.activation)
         # cost function!
-        # if a string name was given, look up the correct function from our utils.
-        if isinstance(self.cost, basestring):
-            cost_func = get_cost_function(self.cost)
-        # otherwise, if a 'callable' was passed (i.e. custom function), use that directly.
-        else:
-            assert callable(self.cost), "Cost function either needs to be a string name or callable!"
-            cost_func = self.cost
+        cost_func = get_cost_function(self.cost)
 
         ####################################################
         # parameters - make sure to deal with params_hook! #
@@ -93,21 +81,14 @@ class BasicLayer(Model):
                 "Expected 2 params (W and b) for BasicLayer, found {0!s}!".format(len(self.params_hook))
             W, b = self.params_hook
         else:
-            # if we are initializing weights from a gaussian distribution
-            if self.weights_init.lower() == 'gaussian':
-                W = get_weights_gaussian(
-                    shape=(self.input_size, self.output_size), mean=self.weights_mean, std=self.weights_std, name="W"
-                )
-            # if we are initializing weights from a uniform distribution
-            elif self.weights_init.lower() == 'uniform':
-                interval = self.weights_interval
-                W = get_weights_uniform(shape=(self.input_size, self.output_size), interval=interval, name="W")
-            # otherwise not implemented
-            else:
-                log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                          str(self.weights_init))
-                raise NotImplementedError("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                                          str(self.weights_init))
+            W = get_weights(weights_init=self.weights_init,
+                            shape=(self.input_size, self.output_size),
+                            name="W",
+                            # if gaussian
+                            mean=self.weights_mean,
+                            std=self.weights_std,
+                            # if uniform
+                            interval=self.weights_interval)
 
             # grab the bias vector
             b = get_bias(shape=self.output_size, name="b", init_values=self.bias_init)
@@ -156,7 +137,8 @@ class SoftmaxLayer(BasicLayer):
     It is a special subclass of the FullyConnectedLayer, with the activation function forced to be 'softmax'
     """
     default = {'cost': 'nll',  # the cost function to use
-               'out_as_probs': False  # whether output is class guess (False) or vector of class probabilities (True)
+               'out_as_probs': False,  # whether output is class guess (False) or vector of class probabilities (True)
+               'outdir': 'outputs/softmax'  # the output directory for this model's outputs
                }
     def __init__(self, inputs_hook=None, config=None, defaults=default, params_hook=None,
                  input_size=None, output_size=None, weights_init=None, weights_mean=None, weights_std=None,

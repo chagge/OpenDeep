@@ -27,7 +27,7 @@ class RandomIterator(Iterator):
     '''
     An iterator that goes through a dataset in a random sequence
     '''
-    def __init__(self, dataset, subset=datasets.TRAIN, batch_size=1, minimum_batch_size=1, rng=None):
+    def __init__(self, dataset, unsupervised=False, subset=datasets.TRAIN, batch_size=1, minimum_batch_size=1, rng=None):
         # initialize a numpy rng if one is not provided
         if rng is None:
             random.seed(123)
@@ -35,14 +35,12 @@ class RandomIterator(Iterator):
         else:
             self.rng = rng
 
-        _t = time.time()
         log.debug('Initializing a %s random iterator over %s', str(type(dataset)), datasets.get_subset_strings(subset))
-        super(self.__class__, self).__init__(dataset, subset, batch_size, minimum_batch_size)
+        super(self.__class__, self).__init__(dataset, unsupervised, subset, batch_size, minimum_batch_size)
 
         # randomize the indices to access
         self.indices = numpy.arange(self.data_len)
         self.rng.shuffle(self.indices)
-        log.debug('iterator took %s to make' % make_time_units_string(time.time() - _t))
 
     def next(self):
         '''
@@ -66,9 +64,10 @@ class RandomIterator(Iterator):
             # grab the labels and data to return
             data = self.dataset.getDataByIndices(indices=indices_this_step,
                                                  subset=self.subset)
+            if self.unsupervised:
+                return data, None
             labels = self.dataset.getLabelsByIndices(indices=indices_this_step,
                                                      subset=self.subset)
-
             return data, labels
         else:
             raise StopIteration()

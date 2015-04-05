@@ -48,7 +48,7 @@ from opendeep.utils.decay import get_decay_function
 from opendeep.utils.activation import get_activation_function
 from opendeep.utils.cost import get_cost_function
 from opendeep.utils.misc import closest_to_square_factors, make_time_units_string
-from opendeep.utils.nnet import get_weights_uniform, get_weights_gaussian, get_bias
+from opendeep.utils.nnet import get_weights, get_bias
 from opendeep.utils.noise import salt_and_pepper, add_gaussian
 from opendeep.utils.image import tile_raster_images
 
@@ -80,7 +80,7 @@ _defaults = {# gsn parameters
             "hidden_add_noise_sigma": 2,  # sigma value for adding the gaussian hidden layer noise
             "input_salt_and_pepper": 0.4,  # the salt and pepper value for inputs corruption
             # data parameters
-            "output_path": 'outputs/gsn/',  # base directory to output various files
+            "outdir": 'outputs/gsn/',  # base directory to output various files
             "is_image": True,  # whether the input should be treated as an image
             "vis_init": False}
 
@@ -93,17 +93,7 @@ class GSN(Model):
                  hidden_activation=None, input_sampling=None, MRG=None, weights_init=None, weights_interval=None,
                  weights_mean=None, weights_std=None, bias_init=None, cost_function=None, noise_decay=None,
                  noise_annealing=None, add_noise=None, noiseless_h1=None, hidden_add_noise_sigma=None,
-                 input_salt_and_pepper=None, output_path=None, is_image=None, vis_init=None):
-        # set up base path for the outputs of the model during training, etc.
-        self.outdir = output_path
-        if not self.outdir and config:
-            self.outdir = config.get('output_path', defaults.get('output_path'))
-        else:
-            self.outdir = defaults.get('output_path')
-        if self.outdir[-1] != '/':
-            self.outdir = self.outdir+'/'
-        file_ops.mkdir_p(self.outdir)
-
+                 input_salt_and_pepper=None, outdir=None, is_image=None, vis_init=None):
         # combine everything by passing to Model's init
         super(GSN, self).__init__(**{arg: val for (arg, val) in locals().iteritems() if arg is not 'self'})
         # configs can now be accessed through self! huzzah!
@@ -160,34 +150,11 @@ class GSN(Model):
         # Activation functions! #
         #########################
         # hidden unit activation
-        if callable(self.hidden_activation):
-            log.debug('Using specified activation for hiddens')
-        elif isinstance(self.args.get('hidden_activation'), basestring):
-            self.hidden_activation = get_activation_function(self.hidden_activation)
-            log.debug('Using %s activation for hiddens', self.hidden_activation)
-        else:
-            log.critical('Missing a hidden activation function!')
-            raise NotImplementedError('Missing a hidden activation function!')
-
+        self.hidden_activation = get_activation_function(self.hidden_activation)
         # Visible layer activation
-        if callable(self.visible_activation):
-            log.debug('Using specified activation for visible layer')
-        elif isinstance(self.visible_activation, basestring):
-            self.visible_activation = get_activation_function(self.visible_activation)
-            log.debug('Using %s activation for visible layer', self.visible_activation)
-        else:
-            log.critical('Missing a visible activation function!')
-            raise NotImplementedError('Missing a visible activation function!')
-
+        self.visible_activation = get_activation_function(self.visible_activation)
         # Cost function
-        if callable(self.cost_function):
-            log.debug('Using specified cost function')
-        elif isinstance(self.args.get('cost_function'), basestring):
-            self.cost_function = get_cost_function(self.cost_function)
-            log.debug('Using %s cost function', self.cost_function)
-        else:
-            log.critical('Missing a cost function!')
-            raise NotImplementedError('Missing a cost function!')
+        self.cost_function = get_cost_function(self.cost_function)
 
         ############################
         # Theano variables and RNG #
@@ -205,24 +172,15 @@ class GSN(Model):
         # Parameters! #
         ###############
         # initialize a list of weights and biases based on layer_sizes for the GSN
-        if self.weights_init.lower() == 'uniform':
-            self.weights_list = [get_weights_uniform(shape=(self.layer_sizes[i], self.layer_sizes[i + 1]),
-                                                     name="W_{0!s}_{1!s}".format(i, i + 1),
-                                                     interval=self.weights_interval)
-                                 for i in range(self.layers)]
-        # if the weights should be gaussian
-        elif self.weights_init.lower() == 'gaussian':
-            self.weights_list = [get_weights_gaussian(shape=(self.layer_sizes[i], self.layer_sizes[i + 1]),
-                                                      name="W_{0!s}_{1!s}".format(i, i + 1),
-                                                      mean=self.weights_mean,
-                                                      std=self.weights_std)
-                                 for i in range(self.layers)]
-        # otherwise not implemented
-        else:
-            log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                      str(self.weights_init))
-            raise NotImplementedError("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
-                                      str(self.weights_init))
+        self.weights_list = [get_weights(weights_init=self.weights_init,
+                                         shape=(self.layer_sizes[i], self.layer_sizes[i + 1]),
+                                         name="W_{0!s}_{1!s}".format(i, i + 1),
+                                         # if gaussian
+                                         mean=self.weights_mean,
+                                         std=self.weights_std,
+                                         # if uniform
+                                         interval=self.weights_interval)
+                             for i in range(self.layers)]
 
         # initialize each layer bias to 0's.
         self.bias_list = [get_bias(shape=(self.layer_sizes[i],),
@@ -362,7 +320,7 @@ class GSN(Model):
                           self.hidden_activation)
 
         #####################################################
-        #     Create the predict and monitor functions      #
+        #     Create the run and monitor functions      #
         #####################################################
         log.debug("Compiling functions...")
         t = time.time()
@@ -371,13 +329,13 @@ class GSN(Model):
         if self.hiddens_hook is None:
             # THIS IS THE MAIN PREDICT FUNCTION - takes in a real matrix and produces the output from the non-noisy
             # computation graph
-            log.debug("f_predict...")
-            self.f_predict = function(inputs  = [self.X],
+            log.debug("f_run...")
+            self.f_run = function(inputs  = [self.X],
                                       outputs = self.output,
                                       name    = 'gsn_f_predict')
 
         # this is a helper function - it corrupts inputs when testing the non-noisy graph (aka before feeding the
-        # input to f_predict)
+        # input to f_run)
         log.debug("f_noise...")
         self.f_noise = function(inputs  = [self.X],
                                 outputs = salt_and_pepper(self.X, self.input_salt_and_pepper, self.MRG),
@@ -405,7 +363,7 @@ class GSN(Model):
         This should return the input(s) to the model's computation graph. This is called by the Optimizer when creating
         the theano train function on the cost expression returned by get_train_cost().
 
-        This should normally return the same theano variable list that is used in the inputs= argument to the f_predict
+        This should normally return the same theano variable list that is used in the inputs= argument to the f_run
         function.
         ------------------
 
@@ -427,7 +385,7 @@ class GSN(Model):
         :rtype: theano tensor (expression)
         """
         if not hasattr(self, 'hiddens'):
-            log.error("Missing self.hiddens - make sure you ran self.build_computation_graph()! "
+            log.error("Missing self.hiddens - make sure you ran self.build_rbm()! "
                       "This should have run during initialization....")
             raise NotImplementedError()
         return self.pack_hiddens(self.hiddens)
@@ -435,7 +393,7 @@ class GSN(Model):
     def get_outputs(self):
         """
         This method will return the model's output variable expression from the computational graph. This should be
-        what is given for the outputs= part of the 'f_predict' function from self.predict().
+        what is given for the outputs= part of the 'f_run' function from self.run().
 
         This will be used for creating hooks to link models together, where these outputs can be strung as the inputs
         or hiddens to another model :)
@@ -446,7 +404,7 @@ class GSN(Model):
         """
         if not hasattr(self, 'output'):
             log.error(
-                "Missing self.output - make sure you ran self.build_computation_graph()! "
+                "Missing self.output - make sure you ran self.build_rbm()! "
                 "This should have run during initialization....")
             raise NotImplementedError()
         return self.output
@@ -553,7 +511,7 @@ class GSN(Model):
     #         for i in xrange(n_samples-1):
     #             _t = time.time()
     #
-    #             # feed the last state into the network, compute new state, and obtain visible units expectation chain
+    #             # feed the last state into the network, run new state, and obtain visible units expectation chain
     #             net_state_out, vis_pX_chain = sampling_wrapper(network_state[-1])
     #
     #             # append to the visible chain
@@ -607,7 +565,7 @@ class GSN(Model):
             n_examples = len(input_data)
             xs_test = input_data
             noisy_xs_test = self.f_noise(input_data)
-            reconstructed = self.predict(noisy_xs_test)
+            reconstructed = self.run(noisy_xs_test)
             # Concatenate stuff
             width, height = closest_to_square_factors(n_examples)
             stacked = numpy.vstack(
@@ -682,17 +640,11 @@ class GSN(Model):
         :return: whether or not successful
         :rtype: Boolean
         """
-        # save to the output directory from the model config
-        base = self.outdir
-        filepath = os.path.join(base, param_file)
-        super(GSN, self).save_params(filepath)
+        super(GSN, self).save_params(param_file)
 
 
     def save_args(self, args_file="gsn_config.pkl"):
-        # save to the output directory from the model config
-        base = self.outdir
-        filepath = os.path.join(base, args_file)
-        super(GSN, self).save_args(filepath)
+        super(GSN, self).save_args(args_file)
 
 
 ###############################################

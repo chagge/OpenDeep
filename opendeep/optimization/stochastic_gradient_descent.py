@@ -93,7 +93,10 @@ class SGD(Optimizer):
                                                      self.momentum,
                                                      self.momentum.get_value(),
                                                      momentum_factor or self.args.get('momentum_factor'))
-        self.nesterov_momentum = nesterov_momentum or self.args.get('nesterov_momentum')
+        if nesterov_momentum is not None:
+            self.nesterov_momentum = nesterov_momentum
+        else:
+            self.nesterov_momentum = self.args.get('nesterov_momentum')
 
         # RNG for working on random iterator
         if rng is None:
@@ -129,7 +132,7 @@ class SGD(Optimizer):
             # Compile the training function!
             log.info('Compiling f_learn %d/%d function for model %s...', i+1, len(train_costs), str(type(self.model)))
             t = time.time()
-            f_learn = function(inputs  = model.get_inputs()+model.get_targets(),
+            f_learn = function(inputs  = raise_to_list(model.get_inputs()) + raise_to_list(model.get_targets()),
                                updates = train_updates,
                                outputs = train_cost,
                                name    = 'f_learn_%d' % i)
@@ -142,10 +145,12 @@ class SGD(Optimizer):
         monitors_expressions = self.model.get_monitors()
         self.monitors = {key: [] for key in monitors_expressions.keys()}
         for monitor_name, monitor_expr in monitors_expressions.iteritems():
-            monitor_function = function(inputs=self.model.get_inputs()+self.model.get_targets(),
-                                        updates=self.model.get_updates(),
-                                        outputs=monitor_expr,
-                                        name=monitor_name)
+            monitor_function = function(
+                inputs  = raise_to_list(self.model.get_inputs()) + raise_to_list(self.model.get_targets()),
+                updates = self.model.get_updates(),
+                outputs = monitor_expr,
+                name    = monitor_name
+            )
             self.monitors[monitor_name].append(monitor_function)
         log.debug("Compilation done. Took %s", make_time_units_string(time.time() - monitor_t))
 
@@ -275,13 +280,27 @@ class SGD(Optimizer):
             #train
             train_costs = []
             train_monitors = {key: [] for key in self.monitors.keys()}
-            for x, y in self.iterator(self.dataset, datasets.TRAIN, self.batch_size, self.minimum_batch_size, self.rng):
+            ######
+            i=0
+            #########
+            for x, y in self.iterator(
+                    self.dataset, unsupervised, datasets.TRAIN, self.batch_size, self.minimum_batch_size, self.rng
+            ):
                 if unsupervised:
+                    ######
+                    t0 = time.time()
+                    #########
                     train_costs.append(f_learn(x))
+                    ######
+                    print i, make_time_units_string(time.time()-t0)
+                    ##########
                     self.call_monitors(monitors_dict=train_monitors, inputs=[x])
                 else:
                     train_costs.append(f_learn(x, y))
                     self.call_monitors(monitors_dict=train_monitors, inputs=[x, y])
+                ######
+                i+=1
+                ########
 
             log.info('Train cost: %s', trunc(numpy.mean(train_costs, 0)))
             if len(self.monitors.keys()) > 0:
@@ -292,7 +311,7 @@ class SGD(Optimizer):
             if self.dataset.hasSubset(datasets.VALID) and len(self.monitors.keys()) > 0:
                 valid_monitors = {key: [] for key in self.monitors.keys()}
                 for x, y in self.iterator(
-                        self.dataset, datasets.VALID, self.batch_size, self.minimum_batch_size, self.rng
+                        self.dataset, unsupervised, datasets.VALID, self.batch_size, self.minimum_batch_size, self.rng
                 ):
                     if unsupervised:
                         self.call_monitors(monitors_dict=valid_monitors, inputs=[x])
@@ -306,7 +325,7 @@ class SGD(Optimizer):
             if self.dataset.hasSubset(datasets.TEST) and len(self.monitors.keys()) > 0:
                 test_monitors = {key: [] for key in self.monitors.keys()}
                 for x, y in self.iterator(
-                        self.dataset, datasets.TEST, self.batch_size, self.minimum_batch_size, self.rng
+                        self.dataset, unsupervised, datasets.TEST, self.batch_size, self.minimum_batch_size, self.rng
                 ):
                     if unsupervised:
                         self.call_monitors(monitors_dict=test_monitors, inputs=[x])

@@ -42,6 +42,49 @@ _uniform_interval = {
 }
 default_interval = 'montreal'
 
+def get_weights(weights_init, shape, mean=None, std=None, interval=None, rng=None, name="W", **kwargs):
+    """
+    This will initialize the weights from the method passed from weights_init with the arguments in kwargs
+
+    :param weights_init: string of the method for creating weights
+    :type weights_init: basestring
+
+    :param shape: tuple of the shape you want the weight matrix
+    :type shape: tuple or ndarray
+
+    :param mean: mean if using gaussian weights
+    :type mean: float
+
+    :param std: std if using gaussian weights
+    :type std: float
+
+    :param interval: +- interval to use for uniform weights
+    :type interval: float or string
+
+    :param rng: random number generator to use for sampling
+    :type rng: numpy or theano rng
+
+    :param name: name for the returned tensor
+    :type name: basestring
+
+    :return: theano tensor (shared variable) for the weights
+    :rtype: shared tensor
+    """
+    # make sure the weights_init is a string to the method to use
+    if isinstance(weights_init, basestring):
+        # if we are initializing weights from a normal distribution
+        if weights_init.lower() == 'gaussian':
+            return get_weights_gaussian(shape=shape, mean=mean, std=std, name=name, rng=rng)
+        # if we are initializing weights from a uniform distribution
+        elif weights_init.lower() == 'uniform':
+            return get_weights_uniform(shape=shape, interval=interval, name=name, rng=rng)
+
+    # otherwise not implemented
+    log.error("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
+              str(weights_init))
+    raise NotImplementedError("Did not recognize weights_init %s! Pleas try gaussian or uniform" %
+                              str(weights_init))
+
 def get_weights_uniform(shape, interval=None, name="W", rng=None):
     """
     This initializes a shared variable with a given shape for weights drawn from a Uniform distribution with

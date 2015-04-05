@@ -24,12 +24,10 @@ class SequentialIterator(Iterator):
     '''
     An iterator that goes through a dataset in its stored sequence
     '''
-    def __init__(self, dataset, subset=datasets.TRAIN, batch_size=1, minimum_batch_size=1, rng=None):
-        _t = time.time()
+    def __init__(self, dataset, unsupervised=False, subset=datasets.TRAIN, batch_size=1, minimum_batch_size=1, rng=None):
         log.debug('Initializing a %s sequential iterator over %s',
                   str(type(dataset)), datasets.get_subset_strings(subset))
-        super(self.__class__, self).__init__(dataset, subset, batch_size, minimum_batch_size, rng)
-        log.debug('iterator took %s to make' % make_time_units_string(time.time()-_t))
+        super(self.__class__, self).__init__(dataset, unsupervised, subset, batch_size, minimum_batch_size, rng)
 
     def next(self):
         '''
@@ -52,9 +50,11 @@ class SequentialIterator(Iterator):
             # grab the data and labels to return
             data = self.dataset.getDataByIndices(indices=list(range(_start_index, _end_index)),
                                                  subset=self.subset)
+            if self.unsupervised:
+                return data, None
+
             labels = self.dataset.getLabelsByIndices(indices=list(range(_start_index, _end_index)),
                                                      subset=self.subset)
-
             return data, labels
         else:
             raise StopIteration()

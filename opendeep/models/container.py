@@ -108,9 +108,9 @@ class Prototype(Model):
         This should return the input(s) to the container's computation graph as a list.
         This is called by the Optimizer when creating the theano train function on the cost expressions
         returned by get_train_cost(). Therefore, these are the training function inputs! (Which is different
-        from f_predict inputs if you include the supervised labels)
+        from f_run inputs if you include the supervised labels)
 
-        This should normally return the same theano variable list that is used in the inputs= argument to the f_predict
+        This should normally return the same theano variable list that is used in the inputs= argument to the f_run
         function for unsupervised models, and the [inputs, label] variables for the supervised case.
         ------------------
 
@@ -135,7 +135,7 @@ class Prototype(Model):
     def get_outputs(self):
         """
         This method will return the container's output variable expression from the computational graph.
-        This should be what is given for the outputs= part of the 'f_predict' function from self.predict().
+        This should be what is given for the outputs= part of the 'f_run' function from self.run().
 
         This will be used for creating hooks to link models together,
         where these outputs can be strung as the inputs or hiddens to another model :)
@@ -155,13 +155,13 @@ class Prototype(Model):
             log.warning("This container doesn't have any models! So no outputs to get...")
             return None
 
-    def predict(self, input):
+    def run(self, input):
         """
         This method will return the model's output (run through the function), given an input. In the case that
         input_hooks or hidden_hooks are used, the function should use them appropriately and assume they are the input.
 
-        Try to avoid re-compiling the theano function created for predict - check a hasattr(self, 'f_predict') or
-        something similar first. I recommend creating your theano f_predict in a create_computation_graph method
+        Try to avoid re-compiling the theano function created for run - check a hasattr(self, 'f_run') or
+        something similar first. I recommend creating your theano f_run in a create_computation_graph method
         to be called after the class initializes.
         ------------------
 
@@ -173,19 +173,19 @@ class Prototype(Model):
         """
         # make sure the input is raised to a list - we are going to splat it!
         input = raise_to_list(input)
-        # first check if we already made an f_predict function
-        if hasattr(self, 'f_predict'):
-            return self.f_predict(*input)
+        # first check if we already made an f_run function
+        if hasattr(self, 'f_run'):
+            return self.f_run(*input)
         # otherwise, compile it!
         else:
             inputs = self.get_inputs()
             outputs = self.get_outputs()
             updates = self.get_updates()
             t = time.time()
-            log.info("Compiling f_predict...")
-            self.f_predict = function(inputs=inputs, outputs=outputs, updates=updates, name="f_predict")
+            log.info("Compiling f_run...")
+            self.f_run = function(inputs=inputs, outputs=outputs, updates=updates, name="f_run")
             log.info("Compilation done! Took %s", make_time_units_string(time.time() - t))
-            return self.f_predict(*input)
+            return self.f_run(*input)
 
     def get_targets(self):
         """

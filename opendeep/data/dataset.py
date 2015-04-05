@@ -41,8 +41,8 @@ def get_subset_strings(subset):
     else:
         return str(subset)
 
-# TODO: I don't think this is very efficient implementation, especially with the iterators.
-# However, it is flexible. Need to look into it further to optimize.
+# TODO: I don't think this is very efficient implementation, due to the iterators. Indexing directly is faster.
+# However, it is more flexible than indexing. Need to look into it further to optimize.
 class Dataset(object):
     '''
     Default interface for a dataset object - a bunch of sources for an iterator to grab data from

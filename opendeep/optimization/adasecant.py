@@ -87,7 +87,9 @@ class AdaSecant(SGD):
                 'delta_clip': None,
                 'use_adagrad': False,
                 'skip_nan_inf': False,
-                'use_corrected_grad': True}
+                'use_corrected_grad': True,
+                'learning_rate': 1e-6  # epsilon
+                }
 
     def __init__(self, model, dataset,
                  decay=None,

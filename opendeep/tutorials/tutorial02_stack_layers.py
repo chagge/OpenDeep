@@ -30,8 +30,8 @@ def create_mlp():
     optimizer.train()
 
     test_data = mnist.getDataByIndices(indices=range(25), subset=TEST)
-    # use the predict function!
-    preds = mlp.predict(test_data)
+    # use the run function!
+    preds = mlp.run(test_data)
     log.info('-------')
     log.info("predicted: %s",str(preds))
     log.info("actual:    %s",str(mnist.getLabelsByIndices(indices=range(25), subset=TEST).astype('int32')))
