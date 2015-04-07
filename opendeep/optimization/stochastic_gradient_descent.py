@@ -87,12 +87,16 @@ class SGD(Optimizer):
                                                           lr_factor or self.args.get('lr_factor'))
 
         # Momentum - smoothing over the parameter changes (see Hinton)
-        self.momentum = sharedX(momentum or self.args.get('momentum'), 'momentum')
-        if self.args.get('momentum_decay'):
-            self.momentum_decay = get_decay_function(momentum_decay or self.args.get('momentum_decay'),
-                                                     self.momentum,
-                                                     self.momentum.get_value(),
-                                                     momentum_factor or self.args.get('momentum_factor'))
+        momentum = momentum or self.args.get('momentum')
+        momentum_decay = momentum_decay or self.args.get('momentum_decay')
+        momentum_factor = momentum_factor or self.args.get('momentum_factor')
+        if momentum:
+            self.momentum = sharedX(momentum, 'momentum')
+            if momentum_decay and momentum_factor:
+                self.momentum_decay = get_decay_function(momentum_decay,
+                                                         self.momentum,
+                                                         self.momentum.get_value(),
+                                                         momentum_factor)
         if nesterov_momentum is not None:
             self.nesterov_momentum = nesterov_momentum
         else:
