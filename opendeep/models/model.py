@@ -522,7 +522,7 @@ class Model(object):
         if extension.lower() != ".pkl" or extension.lower() != ".pickle" or extension.lower() != ".p":
             ''.join([param_file, '.pkl'])
 
-        log.debug('Saving %s parameters to %s...',
+        log.debug('Saving %s parameters to %s',
                   str(type(self)), str(param_file))
         # try to dump the param values
         with open(param_file, 'wb') as f:
@@ -554,7 +554,7 @@ class Model(object):
         # make sure it is a pickle file
         ftype = file_ops.get_file_type(param_file)
         if ftype == file_ops.PKL:
-            log.debug("loading model %s parameters from %s...",
+            log.debug("loading model %s parameters from %s",
                       str(type(self)), str(param_file))
             # try to grab the pickled params from the specified param_file path
             with open(param_file, 'r') as f:
@@ -589,7 +589,7 @@ class Model(object):
         if extension.lower() != ".pkl" or extension.lower() != ".pickle" or extension.lower() != ".p":
             ''.join([args_file, '.pkl'])
 
-        log.debug('Saving %s configuration to %s...',
+        log.debug('Saving %s configuration to %s',
                   str(type(self)), str(args_file))
         # try to dump the param values
         with open(args_file, 'wb') as f:

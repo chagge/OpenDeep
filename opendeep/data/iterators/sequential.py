@@ -16,7 +16,6 @@ import time
 # internal references
 from opendeep.data.iterators.iterator import Iterator
 import opendeep.data.dataset as datasets
-from opendeep.utils.misc import make_time_units_string
 
 log = logging.getLogger(__name__)
 
@@ -24,9 +23,11 @@ class SequentialIterator(Iterator):
     '''
     An iterator that goes through a dataset in its stored sequence
     '''
-    def __init__(self, dataset, unsupervised=False, subset=datasets.TRAIN, batch_size=1, minimum_batch_size=1, rng=None):
-        log.debug('Initializing a %s sequential iterator over %s',
-                  str(type(dataset)), datasets.get_subset_strings(subset))
+    def __init__(self, dataset, unsupervised=False, subset=datasets.TRAIN,
+                 batch_size=1, minimum_batch_size=1,
+                 rng=None):
+        log.debug('Initializing a %s sequential iterator over %s, unsupervised=%s',
+                  str(type(dataset)), datasets.get_subset_strings(subset), str(unsupervised))
         super(self.__class__, self).__init__(dataset, unsupervised, subset, batch_size, minimum_batch_size, rng)
 
     def next(self):
@@ -42,18 +43,18 @@ class SequentialIterator(Iterator):
         to do so on subsequent calls. Implementations that do not obey this property are deemed broken.
         '''
         if self.iteration_index < len(self.iterations):
-            # convert the iteration index into the start and end indices for the batch in the dataset
-            _start_index = self.iteration_index*self.batch_size
-            _end_index   = _start_index + self.iterations[self.iteration_index]
+            # grab the start and end indices for the batch in the dataset
+            start_index, end_index = self.iterations[self.iteration_index]
             # increment the iteration index
             self.iteration_index += 1
             # grab the data and labels to return
-            data = self.dataset.getDataByIndices(indices=list(range(_start_index, _end_index)),
+            data = self.dataset.getDataByIndices(indices=list(range(start_index, end_index)),
                                                  subset=self.subset)
+            # if this is an unsupervised iteration, only return the data (saves some time by not evaluating labels)
             if self.unsupervised:
                 return data, None
 
-            labels = self.dataset.getLabelsByIndices(indices=list(range(_start_index, _end_index)),
+            labels = self.dataset.getLabelsByIndices(indices=list(range(start_index, end_index)),
                                                      subset=self.subset)
             return data, labels
         else:

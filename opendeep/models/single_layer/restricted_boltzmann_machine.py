@@ -175,6 +175,12 @@ class RBM(Model):
         mean_v, _, _, _ = self.gibbs_step_vhv(v_sample)
 
         # some monitors
+        # get rid of the -inf for the pseudo_log monitor (due to 0's and 1's in mean_v)
+        # eps = 1e-8
+        # zero_indices = T.eq(mean_v, 0.0).nonzero()
+        # one_indices = T.eq(mean_v, 1.0).nonzero()
+        # mean_v = T.inc_subtensor(x=mean_v[zero_indices], y=eps)
+        # mean_v = T.inc_subtensor(x=mean_v[one_indices], y=-eps)
         pseudo_log = T.xlogx.xlogy0(self.input, mean_v) + T.xlogx.xlogy0(1 - self.input, 1 - mean_v)
         pseudo_log = pseudo_log.sum() / self.input.shape[0]
         crossentropy = T.mean(binary_crossentropy(mean_v, self.input))
@@ -231,8 +237,15 @@ class RBM(Model):
         mean_v = gibbs_step(v_sample)[0]
 
         # some monitors
+        # get rid of the -inf for the pseudo_log monitor (due to 0's and 1's in mean_v)
+        # eps = 1e-8
+        # zero_indices = T.eq(mean_v, 0.0).nonzero()
+        # one_indices = T.eq(mean_v, 1.0).nonzero()
+        # mean_v = T.inc_subtensor(x=mean_v[zero_indices], y=eps)
+        # mean_v = T.inc_subtensor(x=mean_v[one_indices], y=-eps)
         pseudo_log = T.xlogx.xlogy0(v, mean_v) + T.xlogx.xlogy0(1 - v, 1 - mean_v)
         pseudo_log = pseudo_log.sum() / v.shape[0]
+
         crossentropy = T.mean(binary_crossentropy(mean_v, v))
 
         monitors = {'pseudo-log': pseudo_log, 'crossentropy': crossentropy}
