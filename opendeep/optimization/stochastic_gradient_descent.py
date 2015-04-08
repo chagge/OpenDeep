@@ -97,6 +97,9 @@ class SGD(Optimizer):
                                                          self.momentum,
                                                          self.momentum.get_value(),
                                                          momentum_factor)
+        else:
+            self.momentum = 1
+
         if nesterov_momentum is not None:
             self.nesterov_momentum = nesterov_momentum
         else:
@@ -146,16 +149,24 @@ class SGD(Optimizer):
         # grab the expression(s) to use to monitor different model values during training
         log.debug("Compiling monitor functions...")
         monitor_t = time.time()
-        monitors_expressions = self.model.get_monitors()
-        self.monitors = {key: [] for key in monitors_expressions.keys()}
-        for monitor_name, monitor_expr in monitors_expressions.iteritems():
-            monitor_function = function(
+        self.monitors = OrderedDict(self.model.get_monitors())
+        self.monitor_names = self.monitors.keys()
+        if len(self.monitors.keys()) > 0:
+            self.monitor_function = function(
                 inputs  = raise_to_list(self.model.get_inputs()) + raise_to_list(self.model.get_targets()),
                 updates = self.model.get_updates(),
-                outputs = monitor_expr,
-                name    = monitor_name
+                outputs = self.monitors.values(),
+                name    = "monitor_function"
             )
-            self.monitors[monitor_name].append(monitor_function)
+        # self.monitors = {key: [] for key in monitors_expressions.keys()}
+        # for monitor_name, monitor_expr in monitors_expressions.iteritems():
+        #     monitor_function = function(
+        #         inputs  = raise_to_list(self.model.get_inputs()) + raise_to_list(self.model.get_targets()),
+        #         updates = self.model.get_updates(),
+        #         outputs = monitor_expr,
+        #         name    = monitor_name
+        #     )
+        #     self.monitors[monitor_name].append(monitor_function)
         log.debug("Compilation done. Took %s", make_time_units_string(time.time() - monitor_t))
 
 
@@ -373,7 +384,11 @@ class SGD(Optimizer):
             return stop
 
     def call_monitors(self, monitors_dict, inputs):
-        for key in self.monitors.keys():
-            monitor_functions = raise_to_list(self.monitors[key])
-            for monitor_function in monitor_functions:
-                monitors_dict[key].append(monitor_function(*inputs))
+        if hasattr(self, 'monitor_function'):
+            outs = self.monitor_function(*inputs)
+            for i, out in enumerate(outs):
+                monitors_dict[self.monitor_names[i]].append(out)
+        # for key in self.monitors.keys():
+        #     monitor_functions = raise_to_list(self.monitors[key])
+        #     for monitor_function in monitor_functions:
+        #         monitors_dict[key].append(monitor_function(*inputs))

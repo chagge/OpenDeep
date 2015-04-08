@@ -79,7 +79,7 @@ class RBM(Model):
             self.input = self.inputs_hook[1]
         else:
             # make the input a symbolic matrix
-            self.input = T.fmatrix('V')
+            self.input = T.matrix('V')
 
         # either grab the hidden's desired size from the parameter directly, or copy n_in
         self.hidden_size = self.hidden_size or self.input_size
@@ -122,9 +122,9 @@ class RBM(Model):
         if self.params_hook is not None:
             # make sure the params_hook has W (weights matrix) and bh, bv (bias vectors)
             assert len(self.params_hook) == 3, \
-                "Expected 3 params (W, bh, bv) for RBM, found {0!s}!".format(len(self.params_hook))
-            self.W, self.bh, self.bv = self.params_hook
-            self.hidden_size = self.W.shape[1]
+                "Expected 3 params (W, bv, bh) for RBM, found {0!s}!".format(len(self.params_hook))
+            self.W, self.bv, self.bh = self.params_hook
+            self.hidden_size = self.W.shape[1].eval()
         else:
             self.W = get_weights(weights_init=self.weights_init,
                                  shape=(self.input_size, self.hidden_size),
@@ -136,11 +136,11 @@ class RBM(Model):
                                  interval=self.weights_interval)
 
             # grab the bias vectors
-            self.bh = get_bias(shape=self.hidden_size, name="bh", init_values=self.bias_init)
             self.bv = get_bias(shape=self.input_size, name="bv", init_values=self.bias_init)
+            self.bh = get_bias(shape=self.hidden_size, name="bh", init_values=self.bias_init)
 
         # Finally have the three parameters
-        self.params = [self.W, self.bh, self.bv]
+        self.params = [self.W, self.bv, self.bh]
 
         # Create the RBM graph!
         self.cost, self.monitors, self.updates, self.v_sample, self.h_sample = self.build_rbm()
@@ -188,74 +188,13 @@ class RBM(Model):
         monitors = {'pseudo-log': pseudo_log, 'crossentropy': crossentropy}
 
         # the free-energy cost function!
-        cost = (self.free_energy(self.input) - self.free_energy(v_sample)) / self.input.shape[0]
+        # consider v_sample constant when computing gradients on the cost function
+        # this actually keeps v_sample from being considered in the gradient, to set gradient to 0 instead,
+        # use theano.gradient.zero_grad
+        v_sample_constant = theano.gradient.disconnected_grad(v_sample)
+        cost = (self.free_energy(self.input) - self.free_energy(v_sample_constant)) / self.input.shape[0]
 
         return cost, monitors, updates, v_sample, h_sample
-
-    @staticmethod
-    def create_rbm(v, W, bv, bh, k, rng):
-        '''
-        Construct a k-step Gibbs chain starting at v for an RBM.
-
-        v : Theano vector or matrix
-            If a matrix, multiple chains will be run in parallel (batch).
-        W : Theano matrix
-            Weight matrix of the RBM.
-        bv : Theano vector
-            Visible bias vector of the RBM.
-        bh : Theano vector
-            Hidden bias vector of the RBM.
-        k : scalar or Theano scalar
-            Length of the Gibbs chain.
-
-        Return a (v_sample, cost, monitor, updates) tuple:
-
-        v_sample : Theano vector or matrix with the same shape as `v`
-            Corresponds to the generated sample(s).
-        cost : Theano scalar
-            Expression whose gradient with respect to W, bv, bh is the CD-k
-            approximation to the log-likelihood of `v` (training example) under the
-            RBM. The cost is averaged in the batch case.
-        monitor: Theano scalar
-            Pseudo log-likelihood (also averaged in the batch case).
-        updates: dictionary of Theano variable -> Theano variable
-            The `updates` object returned by scan.
-        '''
-        def gibbs_step(v):
-            mean_h = T.nnet.sigmoid(T.dot(v, W) + bh)
-            h = rng.binomial(size=mean_h.shape, n=1, p=mean_h,
-                             dtype=theano.config.floatX)
-            mean_v = T.nnet.sigmoid(T.dot(h, W.T) + bv)
-            v = rng.binomial(size=mean_v.shape, n=1, p=mean_v,
-                             dtype=theano.config.floatX)
-            return mean_v, v
-
-        chain, updates = theano.scan(lambda v: gibbs_step(v)[1], outputs_info=[v],
-                                     n_steps=k)
-        v_sample = chain[-1]
-
-        mean_v = gibbs_step(v_sample)[0]
-
-        # some monitors
-        # get rid of the -inf for the pseudo_log monitor (due to 0's and 1's in mean_v)
-        # eps = 1e-8
-        # zero_indices = T.eq(mean_v, 0.0).nonzero()
-        # one_indices = T.eq(mean_v, 1.0).nonzero()
-        # mean_v = T.inc_subtensor(x=mean_v[zero_indices], y=eps)
-        # mean_v = T.inc_subtensor(x=mean_v[one_indices], y=-eps)
-        pseudo_log = T.xlogx.xlogy0(v, mean_v) + T.xlogx.xlogy0(1 - v, 1 - mean_v)
-        pseudo_log = pseudo_log.sum() / v.shape[0]
-
-        crossentropy = T.mean(binary_crossentropy(mean_v, v))
-
-        monitors = {'pseudo-log': pseudo_log, 'crossentropy': crossentropy}
-
-        def free_energy(v):
-            return -(v * bv).sum() - T.log(1 + T.exp(T.dot(v, W) + bh)).sum()
-
-        cost = (free_energy(v) - free_energy(v_sample)) / v.shape[0]
-
-        return v_sample, cost, monitors, updates
 
     def gibbs_step_vhv(self, v):
         # compute the hiddens and sample
@@ -310,13 +249,6 @@ class RBM(Model):
 
     def get_train_cost(self):
         return self.cost
-
-    def get_gradient(self, starting_gradient=None, cost=None, additional_cost=None):
-        # consider v_sample constant when computing gradients
-        # this actually keeps v_sample from being considered in the gradient, to set gradient to 0 instead,
-        # use theano.gradient.zero_grad
-        theano.gradient.disconnected_grad(self.v_sample)
-        return super(RBM, self).get_gradient(starting_gradient, cost, additional_cost)
 
     def get_updates(self):
         return self.updates
