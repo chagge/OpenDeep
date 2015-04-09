@@ -64,7 +64,7 @@ _defaults = {# gsn parameters
             "visible_activation": 'sigmoid',  # activation for visible layer - make appropriate for input data type.
             "hidden_activation": 'tanh',  # activation for hidden layers
             "input_sampling": True,  # whether to sample at each walkback step - makes it like Gibbs sampling.
-            "MRG": RNG_MRG.MRG_RandomStreams(1),  # default random number generator from Theano
+            "mrg": RNG_MRG.MRG_RandomStreams(1),  # default random number generator from Theano
             "weights_init": "uniform",  # how to initialize weights
             'weights_interval': 'montreal',  # if the weights_init was 'uniform', how to initialize from uniform
             'weights_mean': 0,  # mean for gaussian weights init
@@ -90,7 +90,7 @@ class GSN(Model):
     '''
     def __init__(self, config=None, defaults=_defaults, inputs_hook=None, hiddens_hook=None, dataset=None,
                  layers=None, walkbacks=None, input_size=None, hidden_size=None, visible_activation=None,
-                 hidden_activation=None, input_sampling=None, MRG=None, weights_init=None, weights_interval=None,
+                 hidden_activation=None, input_sampling=None, mrg=None, weights_init=None, weights_interval=None,
                  weights_mean=None, weights_std=None, bias_init=None, cost_function=None, noise_decay=None,
                  noise_annealing=None, add_noise=None, noiseless_h1=None, hidden_add_noise_sigma=None,
                  input_salt_and_pepper=None, outdir=None, is_image=None, vis_init=None):
@@ -213,7 +213,7 @@ class GSN(Model):
                                          self.hidden_add_noise_sigma,
                                          self.input_salt_and_pepper,
                                          self.input_sampling,
-                                         self.MRG,
+                                         self.mrg,
                                          self.visible_activation,
                                          self.hidden_activation,
                                          self.walkbacks)
@@ -230,7 +230,7 @@ class GSN(Model):
                                                              self.hidden_add_noise_sigma,
                                                              self.input_salt_and_pepper,
                                                              self.input_sampling,
-                                                             self.MRG,
+                                                             self.mrg,
                                                              self.visible_activation,
                                                              self.hidden_activation,
                                                              self.walkbacks,
@@ -248,7 +248,7 @@ class GSN(Model):
                                                            self.hidden_add_noise_sigma,
                                                            self.input_salt_and_pepper,
                                                            self.input_sampling,
-                                                           self.MRG,
+                                                           self.mrg,
                                                            self.visible_activation,
                                                            self.hidden_activation,
                                                            self.walkbacks)
@@ -262,7 +262,7 @@ class GSN(Model):
                                                                                self.hidden_add_noise_sigma,
                                                                                self.input_salt_and_pepper,
                                                                                self.input_sampling,
-                                                                               self.MRG,
+                                                                               self.mrg,
                                                                                self.visible_activation,
                                                                                self.hidden_activation,
                                                                                self.walkbacks,
@@ -315,7 +315,7 @@ class GSN(Model):
                           self.hidden_add_noise_sigma,
                           self.input_salt_and_pepper,
                           self.input_sampling,
-                          self.MRG,
+                          self.mrg,
                           self.visible_activation,
                           self.hidden_activation)
 
@@ -338,7 +338,7 @@ class GSN(Model):
         # input to f_run)
         log.debug("f_noise...")
         self.f_noise = function(inputs  = [self.X],
-                                outputs = salt_and_pepper(self.X, self.input_salt_and_pepper, self.MRG),
+                                outputs = salt_and_pepper(self.X, self.input_salt_and_pepper, self.mrg),
                                 name    = 'gsn_f_noise')
 
         # the sampling function, for creating lots of samples from the computational graph. (mostly for log-likelihood
@@ -660,7 +660,7 @@ class GSN(Model):
                       hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                       input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                       input_sampling         = _defaults["input_sampling"],
-                      MRG                    = _defaults["MRG"],
+                      mrg                    = _defaults["mrg"],
                       visible_activation     = _defaults["visible_activation"],
                       hidden_activation      = _defaults["hidden_activation"]):
         # One update over the odd layers + one update over the even layers
@@ -674,7 +674,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
         log.debug('even layer updates')
@@ -688,7 +688,7 @@ class GSN(Model):
                                hidden_add_noise_sigma,
                                input_salt_and_pepper,
                                input_sampling,
-                               MRG,
+                               mrg,
                                visible_activation,
                                hidden_activation)
         log.debug('done full update.')
@@ -702,7 +702,7 @@ class GSN(Model):
                                 hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                                 input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                                 input_sampling         = _defaults["input_sampling"],
-                                MRG                    = _defaults["MRG"],
+                                mrg                    = _defaults["mrg"],
                                 visible_activation     = _defaults["visible_activation"],
                                 hidden_activation      = _defaults["hidden_activation"]):
         p_X_chain = []
@@ -718,7 +718,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
         log.debug('even layer updates')
@@ -732,7 +732,7 @@ class GSN(Model):
                                hidden_add_noise_sigma,
                                input_salt_and_pepper,
                                input_sampling,
-                               MRG,
+                               mrg,
                                visible_activation,
                                hidden_activation)
         log.debug('done full update.')
@@ -749,7 +749,7 @@ class GSN(Model):
                               hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                               input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                               input_sampling         = _defaults["input_sampling"],
-                              MRG                    = _defaults["MRG"],
+                              mrg                    = _defaults["mrg"],
                               visible_activation     = _defaults["visible_activation"],
                               hidden_activation      = _defaults["hidden_activation"]):
         # One update over the even layers + one update over the odd layers
@@ -764,7 +764,7 @@ class GSN(Model):
                                hidden_add_noise_sigma,
                                input_salt_and_pepper,
                                input_sampling,
-                               MRG,
+                               mrg,
                                visible_activation,
                                hidden_activation)
         log.debug('odd layer updates')
@@ -777,7 +777,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
         log.debug('done full update.')
@@ -794,7 +794,7 @@ class GSN(Model):
                           hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                           input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                           input_sampling         = _defaults["input_sampling"],
-                          MRG                    = _defaults["MRG"],
+                          mrg                    = _defaults["mrg"],
                           visible_activation     = _defaults["visible_activation"],
                           hidden_activation      = _defaults["hidden_activation"]):
         # Loop over the odd layers
@@ -810,7 +810,7 @@ class GSN(Model):
                                     hidden_add_noise_sigma,
                                     input_salt_and_pepper,
                                     input_sampling,
-                                    MRG,
+                                    mrg,
                                     visible_activation,
                                     hidden_activation)
 
@@ -826,7 +826,7 @@ class GSN(Model):
                            hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                            input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                            input_sampling         = _defaults["input_sampling"],
-                           MRG                    = _defaults["MRG"],
+                           mrg                    = _defaults["mrg"],
                            visible_activation     = _defaults["visible_activation"],
                            hidden_activation      = _defaults["hidden_activation"]):
         # Loop over even layers
@@ -842,7 +842,7 @@ class GSN(Model):
                                     hidden_add_noise_sigma,
                                     input_salt_and_pepper,
                                     input_sampling,
-                                    MRG,
+                                    mrg,
                                     visible_activation,
                                     hidden_activation)
 
@@ -867,7 +867,7 @@ class GSN(Model):
                             hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                             input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                             input_sampling         = _defaults["input_sampling"],
-                            MRG                    = _defaults["MRG"],
+                            mrg                    = _defaults["mrg"],
                             visible_activation     = _defaults["visible_activation"],
                             hidden_activation      = _defaults["hidden_activation"]):
         # Compute the dot product, whatever layer
@@ -894,7 +894,7 @@ class GSN(Model):
         # pre activation noise
         if i != 0 and add_noise:
             log.debug('Adding pre-activation gaussian noise for layer %s', str(i))
-            hiddens[i] = add_gaussian(hiddens[i], std=hidden_add_noise_sigma, MRG=MRG)
+            hiddens[i] = add_gaussian(hiddens[i], std=hidden_add_noise_sigma, mrg=mrg)
 
         # ACTIVATION!
         if i == 0:
@@ -909,7 +909,7 @@ class GSN(Model):
         # this just doubles the amount of noise between each activation of the hiddens.
         if i != 0 and add_noise:
             log.debug('Adding post-activation gaussian noise for layer %s', str(i))
-            hiddens[i] = add_gaussian(hiddens[i], std=hidden_add_noise_sigma, MRG=MRG)
+            hiddens[i] = add_gaussian(hiddens[i], std=hidden_add_noise_sigma, mrg=mrg)
 
         # build the reconstruction chain if updating the visible layer X
         if i == 0:
@@ -920,12 +920,12 @@ class GSN(Model):
             # I.E. FOR BINARY MNIST SAMPLING IS BINOMIAL. real-valued inputs should be gaussian
             if input_sampling:
                 log.debug('Sampling from input')
-                sampled = MRG.binomial(p=hiddens[i], size=hiddens[i].shape, dtype='float32')
+                sampled = mrg.binomial(p=hiddens[i], size=hiddens[i].shape, dtype='float32')
             else:
                 log.debug('>>NO input sampling')
                 sampled = hiddens[i]
             # add noise
-            sampled = salt_and_pepper(sampled, input_salt_and_pepper, MRG)
+            sampled = salt_and_pepper(sampled, input_salt_and_pepper, mrg)
 
             # set input layer
             hiddens[i] = sampled
@@ -944,7 +944,7 @@ class GSN(Model):
                   hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                   input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                   input_sampling         = _defaults["input_sampling"],
-                  MRG                    = _defaults["MRG"],
+                  mrg                    = _defaults["mrg"],
                   visible_activation     = _defaults["visible_activation"],
                   hidden_activation      = _defaults["hidden_activation"],
                   walkbacks              = _defaults["walkbacks"]):
@@ -976,8 +976,8 @@ class GSN(Model):
         @type  input_sampling: Boolean
         @param input_sampling: Whether to sample from each walkback prediction (like Gibbs).
 
-        @type  MRG: Theano random generator
-        @param MRG: Random generator.
+        @type  mrg: Theano random generator
+        @param mrg: Random generator.
 
         @type  visible_activation: Function
         @param visible_activation: The visible layer X activation function.
@@ -994,7 +994,7 @@ class GSN(Model):
         p_X_chain = []
         # Whether or not to corrupt the visible input X
         if add_noise:
-            X_init = salt_and_pepper(X, input_salt_and_pepper, MRG)
+            X_init = salt_and_pepper(X, input_salt_and_pepper, mrg)
         else:
             X_init = X
         # init hiddens with zeros
@@ -1014,7 +1014,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
 
@@ -1030,7 +1030,7 @@ class GSN(Model):
                                 hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                                 input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                                 input_sampling         = _defaults["input_sampling"],
-                                MRG                    = _defaults["MRG"],
+                                mrg                    = _defaults["mrg"],
                                 visible_activation     = _defaults["visible_activation"],
                                 hidden_activation      = _defaults["hidden_activation"],
                                 walkbacks              = _defaults["walkbacks"],
@@ -1049,7 +1049,7 @@ class GSN(Model):
                                       hidden_add_noise_sigma,
                                       input_salt_and_pepper,
                                       input_sampling,
-                                      MRG,
+                                      mrg,
                                       visible_activation,
                                       hidden_activation)
 
@@ -1070,7 +1070,7 @@ class GSN(Model):
                        hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                        input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                        input_sampling         = _defaults["input_sampling"],
-                       MRG                    = _defaults["MRG"],
+                       mrg                    = _defaults["mrg"],
                        visible_activation     = _defaults["visible_activation"],
                        hidden_activation      = _defaults["hidden_activation"],
                        walkbacks              = _defaults["walkbacks"],
@@ -1078,7 +1078,7 @@ class GSN(Model):
 
         # Whether or not to corrupt the visible input X
         if add_noise:
-            X_init = salt_and_pepper(X, input_salt_and_pepper, MRG)
+            X_init = salt_and_pepper(X, input_salt_and_pepper, mrg)
         else:
             X_init = X
         # init hiddens with zeros
@@ -1099,7 +1099,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
 
@@ -1121,7 +1121,7 @@ class GSN(Model):
                     hidden_add_noise_sigma = _defaults["hidden_add_noise_sigma"],
                     input_salt_and_pepper  = _defaults["input_salt_and_pepper"],
                     input_sampling         = _defaults["input_sampling"],
-                    MRG                    = _defaults["MRG"],
+                    mrg                    = _defaults["mrg"],
                     visible_activation     = _defaults["visible_activation"],
                     hidden_activation      = _defaults["hidden_activation"],
                     walkbacks              = _defaults["walkbacks"]):
@@ -1139,7 +1139,7 @@ class GSN(Model):
                               hidden_add_noise_sigma,
                               input_salt_and_pepper,
                               input_sampling,
-                              MRG,
+                              mrg,
                               visible_activation,
                               hidden_activation)
 

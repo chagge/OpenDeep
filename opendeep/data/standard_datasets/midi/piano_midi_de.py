@@ -18,7 +18,6 @@ import glob
 import numpy
 import theano
 # internal imports
-from opendeep import sharedX
 import opendeep.data.dataset as datasets
 from opendeep.data.dataset import FileDataset
 from opendeep.utils.midi import midiread
@@ -53,11 +52,7 @@ class PianoMidiDe(FileDataset):
         self.train_shapes = [train.shape for train in train_datasets]
         self.valid_shapes = [valid.shape for valid in valid_datasets]
         self.test_shapes = [test.shape for test in test_datasets]
-        # put them into shared variables
-        log.debug('Putting Piano-midi.de into theano shared variables')
-        # self.train = sharedX(numpy.concatenate(train_datasets), borrow=True)
-        # self.valid = sharedX(numpy.concatenate(valid_datasets), borrow=True)
-        # self.test = sharedX(numpy.concatenate(test_datasets), borrow=True)
+
         self.train = numpy.concatenate(train_datasets)
         self.valid = numpy.concatenate(valid_datasets)
         self.test = numpy.concatenate(test_datasets)
@@ -67,11 +62,11 @@ class PianoMidiDe(FileDataset):
             log.error('Subset %s not recognized!', datasets.get_subset_strings(subset))
             return None
         if subset is datasets.TRAIN:
-            return self.train[indices]#.eval()
+            return self.train[indices]
         elif subset is datasets.VALID:
-            return self.valid[indices]#.eval()
+            return self.valid[indices]
         elif subset is datasets.TEST:
-            return self.test[indices]#.eval()
+            return self.test[indices]
 
     def getLabelsByIndices(self, indices, subset):
         # no labels

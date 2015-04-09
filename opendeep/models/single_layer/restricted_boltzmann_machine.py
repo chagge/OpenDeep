@@ -50,7 +50,7 @@ class RBM(Model):
         'bias_init': 0.0,  # how to initialize the bias parameter
         'input_size': None,
         'hidden_size': None,
-        'MRG': RNG_MRG.MRG_RandomStreams(1),  # default random number generator from Theano
+        'mrg': RNG_MRG.MRG_RandomStreams(1),  # default random number generator from Theano
         'rng': numpy.random.RandomState(1),  #default random number generator from Numpy
         'k': 15,  # the k steps used for CD-k or PCD-k with Gibbs sampling
         'outdir': 'outputs/rbm/'  # the output directory for this model's outputs
@@ -59,7 +59,7 @@ class RBM(Model):
     def __init__(self, inputs_hook=None, hiddens_hook=None, params_hook=None, config=None, defaults=default,
                  input_size=None, hidden_size=None, visible_activation=None, hidden_activation=None,
                  weights_init=None, weights_mean=None, weights_std=None, weights_interval=None, bias_init=None,
-                 MRG=None, rng=None, k=None, outdir=None):
+                 mrg=None, rng=None, k=None, outdir=None):
         """
         RBM constructor. Defines the parameters of the model along with
         basic operations for inferring hidden from visible (and vice-versa),
@@ -99,7 +99,7 @@ class RBM(Model):
 
         # make sure the sampling functions are appropriate for the activation functions.
         if is_binary(self.visible_activation_func):
-            self.visible_sampling = self.MRG.binomial
+            self.visible_sampling = self.mrg.binomial
         else:
             # TODO: implement non-binary activation
             log.error("Non-binary visible activation not supported yet!")
@@ -110,7 +110,7 @@ class RBM(Model):
 
         # make sure the sampling functions are appropriate for the activation functions.
         if is_binary(self.hidden_activation_func):
-            self.hidden_sampling = self.MRG.binomial
+            self.hidden_sampling = self.mrg.binomial
         else:
             # TODO: implement non-binary activation
             log.error("Non-binary hidden activation not supported yet!")
