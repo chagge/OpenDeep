@@ -56,10 +56,15 @@ class RBM(Model):
         'outdir': 'outputs/rbm/'  # the output directory for this model's outputs
     }
 
-    def __init__(self, inputs_hook=None, hiddens_hook=None, params_hook=None, config=None, defaults=default,
-                 input_size=None, hidden_size=None, visible_activation=None, hidden_activation=None,
-                 weights_init=None, weights_mean=None, weights_std=None, weights_interval=None, bias_init=None,
-                 mrg=None, rng=None, k=None, outdir=None):
+    def __init__(self, config=None, defaults=default,
+                 inputs_hook=None, hiddens_hook=None, params_hook=None,
+                 input_size=None, hidden_size=None,
+                 visible_activation=None, hidden_activation=None,
+                 weights_init=None, weights_mean=None, weights_std=None, weights_interval=None,
+                 bias_init=None,
+                 mrg=None, rng=None,
+                 k=None,
+                 outdir=None):
         """
         RBM constructor. Defines the parameters of the model along with
         basic operations for inferring hidden from visible (and vice-versa),

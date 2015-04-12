@@ -40,9 +40,14 @@ class BasicLayer(Model):
         'output_size': None,
         'outdir': 'outputs/basic'  # the output directory for this model's outputs
     }
-    def __init__(self, inputs_hook=None, config=None, defaults=default, params_hook=None,
-                 input_size=None, output_size=None, activation=None, cost=None, cost_args=None,
-                 weights_init=None, weights_mean=None, weights_std=None, weights_interval=None, bias_init=None,
+    def __init__(self, config=None, defaults=default,
+                 inputs_hook=None, params_hook=None,
+                 input_size=None, output_size=None,
+                 activation=None,
+                 cost=None, cost_args=None,
+                 weights_init=None, weights_mean=None, weights_std=None, weights_interval=None,
+                 bias_init=None,
+                 outdir=None,
                  **kwargs):
         # init Model to combine the defaults and config dictionaries with the initial parameters.
         super(BasicLayer, self).__init__(**{arg: val for (arg, val) in locals().iteritems() if arg is not 'self'})
@@ -140,10 +145,14 @@ class SoftmaxLayer(BasicLayer):
                'out_as_probs': False,  # whether output is class guess (False) or vector of class probabilities (True)
                'outdir': 'outputs/softmax'  # the output directory for this model's outputs
                }
-    def __init__(self, inputs_hook=None, config=None, defaults=default, params_hook=None,
-                 input_size=None, output_size=None, weights_init=None, weights_mean=None, weights_std=None,
-                 weights_interval=None, bias_init=None, cost=None, cost_args=None, activation='softmax',
-                 out_as_probs=None):
+    def __init__(self, config=None, defaults=default,
+                 inputs_hook=None, params_hook=None,
+                 input_size=None, output_size=None,
+                 weights_init=None, weights_mean=None, weights_std=None, weights_interval=None,
+                 bias_init=None,
+                 cost=None, cost_args=None,
+                 out_as_probs=None,
+                 outdir=None):
         # grab what cost to use
         if cost is None:
             if config is not None:
@@ -171,7 +180,8 @@ class SoftmaxLayer(BasicLayer):
                                            weights_std=weights_std,
                                            weights_interval=weights_interval,
                                            bias_init=bias_init,
-                                           out_as_probs=out_as_probs)
+                                           out_as_probs=out_as_probs,
+                                           outdir=outdir)
         # target_flag shows whether or not we are using the super class's targets, or making our own
         # integer vector for targets. This becomes true if we are using the nll cost, since it requires
         # integer labels.
@@ -233,7 +243,6 @@ class SoftmaxLayer(BasicLayer):
             Note: we use the mean instead of the sum so that
                   the learning rate is less dependent on the batch size
             """
-        # start-snippet-2
         # y.shape[0] is (symbolically) the number of rows in y, i.e.,
         # number of examples (call it n) in the minibatch
         # T.arange(y.shape[0]) is a symbolic vector which will contain
